@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic Document Q&A</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar for Uploads -->
+        <aside class="sidebar glass-panel">
+            <div class="sidebar-header">
+                <h2>Agentic Q&A</h2>
+                <p>Knowledge Base</p>
+            </div>
+            
+            <div class="upload-section">
+                <div id="drop-zone" class="drop-zone">
+                    <div class="drop-zone-content">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <p>Drag & Drop PDF or <span class="browse-text">Browse</span></p>
+                        <input type="file" id="file-input" accept=".pdf" hidden>
+                    </div>
+                </div>
+                <div id="upload-status" class="status-message hidden"></div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="dot pulse"></span> Server Online
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-area">
+            <div class="chat-header glass-panel">
+                <h1>Document Assistant</h1>
+                <p>Ask anything about your uploaded documents or general knowledge</p>
+            </div>
+
+            <div id="chat-box" class="chat-box">
+                <!-- Welcome Message -->
+                <div class="message assistant-message slide-in">
+                    <div class="message-avatar">AI</div>
+                    <div class="message-content">
+                        Hello! I am your Agentic Q&A Assistant. Please upload a PDF using the panel on the left, and then ask me any questions about it!
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area glass-panel">
+                <form id="chat-form">
+                    <input type="text" id="query-input" placeholder="Ask a question..." autocomplete="off" required>
+                    <button type="submit" class="send-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
