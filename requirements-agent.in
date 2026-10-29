@@ -1,0 +1,7 @@
+# Independent learning environment; does not replace requirements.txt.
+# Resolve this file into requirements-agent.txt after validating the versions.
+langchain-core>=1,<2
+langchain-ollama>=1,<2
+langgraph>=1,<2
+langsmith>=0.12,<1
+pydantic>=2.7,<3

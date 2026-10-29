@@ -9,3 +9,6 @@ pypdf
 python-multipart
 pydantic-settings
 langchain-community
+docx2txt
+duckduckgo-search
+ddgs

@@ -1,6 +1,9 @@
 venv/
+.venv-agent/
 __pycache__/
 *.pyc
 .env
 data/
 .DS_Store
+.agents/
+skills-lock.json
