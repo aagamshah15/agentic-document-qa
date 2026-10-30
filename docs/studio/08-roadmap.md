@@ -137,6 +137,23 @@ Acceptance criteria:
   version.
 - Zero injection-suite failures that result in a write proposal.
 
+## Release checklist: documentation
+
+The planning documents in `docs/studio/` are internal. Before any public
+release:
+
+- [ ] The planning docs live only in a private location (a private repository,
+      or this repository made private). Deleting them in a later commit is not
+      enough: anything ever pushed to a public repository stays in its git
+      history and in any existing clones or forks.
+- [ ] Public user documentation exists in `docs/user/`: installing, connecting
+      a database, choosing a tier, the Map, asking questions, reviewing
+      findings, approving or exporting migrations, generating seed data, and
+      privacy (what stays local and what a cloud model receives).
+- [ ] The README points users to `docs/user/` and does not link to
+      `docs/studio/`.
+- [ ] Nothing in the shipped app or package includes `docs/studio/`.
+
 ## Later (not scheduled)
 
 - Team server: auth, shared glossary with reviewer roles, two-person approval,

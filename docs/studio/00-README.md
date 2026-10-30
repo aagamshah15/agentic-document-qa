@@ -1,5 +1,10 @@
 # Autonomous Data & Schema Studio: planning documents
 
+> **Internal only.** These documents are for the team building the Studio, not
+> for users. They must not ship with the product or sit in a public
+> repository. Users get separate how-to-use documentation (see the release
+> checklist in [08-roadmap](08-roadmap.md#release-checklist-documentation)).
+
 These documents plan how to turn Dimension, the agentic Document Q&A app in this
 repository, into a database workbench with an agent built in. The short pitch:
 DBeaver or DataGrip, plus a data engineering agent that maps, profiles, queries,
