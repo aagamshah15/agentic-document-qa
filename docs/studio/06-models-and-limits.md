@@ -153,7 +153,7 @@ Quota design notes:
 - **Rate limits per workspace** (for example, 3 concurrent runs) protect a hosted
   service; they are separate from monthly quotas.
 
-For the local-first build (the v1 recommendation), there are no quotas, only
+For the local-first build (v1, decision D1), there are no quotas, only
 per-run budgets.
 
 ## Prompts and structured output

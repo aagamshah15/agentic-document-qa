@@ -39,7 +39,7 @@ in the review environment. What to keep and what to change:
 - **A chat transcript is the wrong main surface.** Most Studio outputs are
   tables, graphs, plans, and diffs. Chat becomes a side panel that drives them.
 
-## Frontend stack recommendation (decision D2)
+## Frontend stack (decision D2)
 
 | Need | Library | Why |
 | --- | --- | --- |

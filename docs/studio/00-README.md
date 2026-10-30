@@ -26,8 +26,8 @@ fact.
 | [08-roadmap](08-roadmap.md) | Milestones, each with acceptance criteria and tests. |
 | [09-evaluation](09-evaluation.md) | Messy fixture databases, scenarios, and how we measure the agent. |
 
-Open decisions that need the owner's input are collected at the end of this
-file.
+The decisions that shape the plan, and the ones still open, are listed at the
+end of this file.
 
 ## Current state of the repository
 
@@ -45,7 +45,7 @@ Studio.
 | Router | Keyword list plus vector similarity (`services/router.py`) | **Replace.** Tool choice comes from the agent; intent routing for the UI comes from explicit modes (see 05). |
 | Retrieval | ChromaDB plus MiniLM embeddings | **Reuse for schema retrieval.** Embed table and column descriptions so large schemas fit the context window (06). |
 | LLM access | Ollama local models; qwen3:4b default for tool use; `langchain-openai` and `OPENAI_API_KEY` present | **Keep local-first.** Add task-based routing and optional bring-your-own-key cloud models (06). |
-| Frontend | Vanilla JS (`frontend/app.js`, ~1,400 lines), design tokens in `styles.css`, light/dark themes, sidebar, model and effort selectors, citation cards | **Keep the tokens and visual language**; recommend migrating to React + TypeScript (05). Citation cards become evidence cards. |
+| Frontend | Vanilla JS (`frontend/app.js`, ~1,400 lines), design tokens in `styles.css`, light/dark themes, sidebar, model and effort selectors, citation cards | **Keep the tokens and visual language**; migrate to React + TypeScript (D2, 05). Citation cards become evidence cards. |
 | Web search | DuckDuckGo route | **Drop from the Studio surface.** It does not help with a private database, and it is another channel for untrusted text. |
 | Config | `core/` settings, `.env` | **Keep**, but flip `LANGCHAIN_TRACING_V2` to off by default (see below). |
 
@@ -97,15 +97,22 @@ These recur across every document:
    from the document agent: deterministic tests for orchestration and safety,
    live-model evaluations for judgment.
 
-## Open decisions for the owner
+## Decisions
 
-These change the plan materially. Each doc notes where it depends on them.
+The owner accepted the recommendations for D1–D5 on 2026-10-30. Other docs
+refer to these decisions by number.
 
-| # | Decision | Options | Recommendation |
+| # | Decision | Options considered | Decided |
 | --- | --- | --- | --- |
-| D1 | Deployment model | (a) Local-first desktop/server app; (b) hosted multi-tenant SaaS; (c) local-first now, team server later | **(c).** Local-first matches the existing Ollama stack and avoids holding customers' credentials. Design the data model with `workspace_id` from day one, so a team server does not need a rewrite. |
+| D1 | Deployment model | (a) Local-first desktop/server app; (b) hosted multi-tenant SaaS; (c) local-first now, team server later | **(c).** Local-first matches the existing Ollama stack and avoids holding customers' credentials. The data model carries `workspace_id` from day one, so a team server does not need a rewrite. |
 | D2 | Frontend migration | (a) Keep vanilla JS; (b) React + Vite + TypeScript, keeping the design tokens; (c) another framework | **(b).** An ERD canvas, a data grid, a SQL editor, and diff views are all mature React components. Writing them by hand in vanilla JS would take most of the effort. See 05. |
-| D3 | Cloud model use | (a) Local only; (b) BYOK cloud as an opt-in per connection; (c) cloud by default | **(b).** Small local models are adequate for routing, summarizing, and simple SQL. Complex migrations and large schemas benefit from stronger models. The user should choose this per connection, and the UI should show which data left the machine. See 06. |
-| D4 | First supported engines | Postgres, MySQL, SQLite, SQL Server, Snowflake, BigQuery... | **Postgres + SQLite + DuckDB files first.** Postgres covers most "messy production database" cases. SQLite and DuckDB make fixtures and demos trivial. Add MySQL next. |
+| D3 | Cloud model use | (a) Local only; (b) BYOK cloud as an opt-in per connection; (c) cloud by default | **(b).** Small local models are adequate for routing, summarizing, and simple SQL. Complex migrations and large schemas benefit from stronger models. The user chooses per connection, and the UI shows which data left the machine. See 06. |
+| D4 | First supported engines | Postgres, MySQL, SQLite, SQL Server, Snowflake, BigQuery... | **Postgres + SQLite + DuckDB files first.** Postgres covers most "messy production database" cases. SQLite and DuckDB make fixtures and demos trivial. MySQL comes next. |
 | D5 | Writes to production at all? | (a) Never, export scripts only; (b) with two-person approval | **(a) for v1.** Production gets read-only access plus exported, reviewed migration scripts. Revisit once the audit and approval features have proven themselves on staging. |
-| D6 | Name | "Dimension Studio", a new name... | Product decision; it does not block engineering. |
+
+### Still open
+
+| # | Decision | Notes |
+| --- | --- | --- |
+| D6 | Name | "Dimension Studio", or a new name. A product decision; it does not block engineering. |
+| D7 | Future of document Q&A | Keep it as a separate mode inside the Studio, or retire it once the Studio replaces the current app (07). Not needed before M3. |

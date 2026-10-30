@@ -232,4 +232,4 @@ Rules:
    EXISTS`, which cannot evolve existing tables.
 3. Point the new frontend at `/api/v2`.
 4. Retire the document routes, or keep document Q&A as a separate mode, once
-   the Studio replaces it (an open product question).
+   the Studio replaces it (open decision D7).
