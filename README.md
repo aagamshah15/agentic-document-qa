@@ -1,162 +1,135 @@
-# Agentic Document Q&A System
+# Dimension — Autonomous Data & Schema Studio
 
-An autonomous, private Document Q&A and Knowledge Assistant built with FastAPI, LangChain, ChromaDB, and a high-density Technical Document Intelligence Console (grounded in Refero Design craft standards).
+> **An intelligent, local-first database workbench and schema studio. Combines multi-engine connectivity (PostgreSQL, MySQL, SQLite, DuckDB), interactive ERD cartography, automated data hygiene triage, guarded NL-to-SQL execution, shadow-verified migrations, and topological synthetic seed generation.**
 
-## Features
-- **100% Local & Private:** Uses local HuggingFace embeddings (`all-MiniLM-L6-v2`) and local LLMs (like `llama3`) via Ollama. No private data is sent to external cloud APIs for document processing.
-- **Multi-Format Document Ingestion:** Supports `.pdf`, `.docx`, `.txt`, and `.md` files with automated chunking and vector indexing.
-- **Autonomous Query Routing & Live Web Search Fallback:** Automatically evaluates query relevance. If an answer cannot be found in your local documents (or if external web information is requested), the agent autonomously falls back to live web search via DuckDuckGo and explicitly labels the source as live web search.
-- **Real-Time Token Streaming:** Server-Sent Events (SSE) stream responses token-by-token directly into the UI with a typewriter effect.
-- **Multi-Chat Support & Persistent Memory:** Manage multiple independent conversation threads in the sidebar with automatic topic titling, thread switching, deletion, and persistent SQLite database storage (`data/chat_history.db`) that survives server restarts.
-- **Dynamic Model & Effort Selection:** Dynamically interrogates local Ollama (`/api/models`) to let users select installed models (`llama3:latest`, `llama3.1:8b`, `qwen3:4b`, etc.) and calibrate reasoning effort (`Low`, `Medium`, `High`) with temperature and prompt adjustments.
-- **Real-Time Stream Interruption (Stop Button):** Instant client-side stream cancellation (`AbortController`) via a dedicated Stop button (`■`) or the `Escape` key, gracefully persisting partial responses into conversation memory.
-- **Interactive Source Citations:** Expandable citation cards under every response showing exact matching document names, 1-indexed page numbers, or clickable web URLs.
-- **1-Click Executive Document Summarizer:** Generate a structured executive summary (Overview, Key Points, Details/Metrics, Conclusions) for any document directly from the sidebar.
-- **Document Management:** Live sidebar file tracker with vector chunk counts, file size badges, and individual or full deletion controls.
+Designed with an Obsidian & Carbon frosted-glass aesthetic, Dimension is built for developers, data engineers, and analysts who require deep database intelligence and schema safety without risking production outages or leaking sensitive customer data.
 
-## Architecture
-- **Backend:** FastAPI, LangChain, SQLite (`data/chat_history.db`), Pydantic
-- **Vector Store:** ChromaDB
-- **Embeddings:** HuggingFace `sentence-transformers` (`all-MiniLM-L6-v2`)
-- **LLM:** Ollama (default: `llama3`)
-- **Web Search Fallback:** `ddgs` (DuckDuckGo Search)
-- **Frontend:** Vanilla JS, HTML5, CSS3 (Obsidian & Carbon Technical Console, JetBrains Mono & Inter typography, Lucide SVG micro-icons, SSE streaming)
+---
 
-## Prerequisites
-1. **Python 3.9+** installed on your machine.
-2. **Ollama** installed on your machine (download from [ollama.com](https://ollama.com/)).
+## ⚡ The 6 Studio Views
 
-## Quick Start
+Dimension organizes the engineering workflow into 6 cohesive views accessible via top tabs or global shortcuts:
 
-### 1. Run Local LLM
-Pull and run the LLaMA 3 model using Ollama:
-```bash
-ollama run llama3
+```mermaid
+flowchart LR
+    V1["1. Chat & SQL (⌘1)"] --> V2["2. ERD Map (⌘2)"]
+    V2 --> V3["3. Hygiene Findings (⌘3)"]
+    V3 --> V4["4. Changes & Migrations (⌘4)"]
+    V4 --> V5["5. Schema Glossary (⌘5)"]
+    V5 --> V6["6. Synthetic Seeds (⌘6)"]
 ```
-*(Leave Ollama running in the background).*
 
-### 2. Set Up Python Environment
-Clone this repository and set up your virtual environment:
+| View | Shortcut | Purpose & Capabilities |
+| :--- | :--- | :--- |
+| **`[Chat]`** | `⌘1` | Natural language database assistant with AST safety parsing, pre-flight `EXPLAIN` cost guards, automatic `LIMIT` rewrites, and 1-click execution cards. |
+| **`[Map]`** | `⌘2` | Interactive ERD diagram canvas visualizing solid declared foreign keys, dashed machine-inferred semantic relationships, and cross-snapshot schema drift. |
+| **`[Findings]`** | `⌘3` | Data hygiene inbox to detect orphan rows, sentinel values (`000-00-0000`, `1900-01-01`), format skew, PII exposure, and unindexed joins with keyboard-driven triage (`J`/`K`/`A`/`D`). |
+| **`[Changes]`** | `⌘4` | Verify-before-write migration workbench featuring lock-risk linting, dependency impact checks, two-way rollback tests on disposable shadow databases, and Decision D5 production export guardrails. |
+| **`[Glossary]`** | `⌘5` | Semantic schema memory repository. Confirms business definitions, enum maps, and filter rules that automatically augment downstream NL→SQL generation. Exportable to dbt `sources.yml`. |
+| **`[Seeds]`** | `⌘6` | Topological Kahn's DAG synthetic seed synthesizer with cycle breaking, distribution matching, and Python `Faker` PII replacement ensuring 0% foreign key violations. |
 
+---
+
+## 🛡️ Core Safety Principles
+
+- **🔒 Local-First by Default**: Runs entirely on your workstation via Ollama (`qwen3:4b`, `qwen2.5-coder`). Telemetry is disabled (`LANGCHAIN_TRACING_V2=false`).
+- **🔑 OS Credential Isolation**: Passwords never touch disk or git. Credentials are stored securely in your OS keychain (`keyring`) with opaque UUID references.
+- **🛡️ Strict Environment Tiers**:
+  - `Sandbox`: Disposable local SQLite/DuckDB files (up to 50M rows read).
+  - `Dev / Staging`: Shared development databases with mandatory PII masking and typed confirmation prompts.
+  - `Prod`: **Decision D5 Protection** — Direct autonomous writes are strictly blocked; changes export as Alembic, Flyway, or raw SQL migration scripts.
+- **📜 Tamper-Proof Audit Chain**: Every execution and change is recorded in an append-only, SHA-256 hash-chained audit log with cryptographic verification (`GET /api/v2/connections/{id}/audit`).
+- **🛑 AST Safety Choke Point**: Queries pass through `sqlglot` tokenizer inspection, blocking multi-statement attacks, CTE-masked writes, and injecting row limits before issuing cryptographic HMAC `query_tokens`.
+
+---
+
+## 🚀 Quickstart
+
+### 1. Requirements
+- **Python**: 3.9, 3.10, 3.11, or 3.12
+- **Supported Engines**: PostgreSQL, MySQL, SQLite, DuckDB
+- **Local Model Runner (Optional)**: Ollama (`ollama run qwen3:4b`)
+
+### 2. Installation
 ```bash
+# Clone the repository
 git clone https://github.com/aagamshah15/agentic-document-qa.git
 cd agentic-document-qa
 
+# Create and activate virtual environment
 python3 -m venv venv
 source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 3. Run the Server
-Start the FastAPI server:
-
+### 3. Start the Server
 ```bash
 uvicorn main:app --reload --port 8001
 ```
 
-### 4. Open the Application
-Navigate to **http://127.0.0.1:8001/** in your browser. 
+Open [http://localhost:8001](http://localhost:8001) in your browser.
 
-## Project Structure
-- `api/`: FastAPI routes (`/upload`, `/query`, `/query/stream`, `/documents`, `/chat/clear`).
-- `core/`: Environment and configuration management.
-- `frontend/`: Technical Console UI (HTML, CSS tokens, JS with SSE reader, SVG icon system).
-- `services/`: 
-  - `agent.py`: Conversational RAG chain & session memory.
-  - `document_processor.py`: Multi-format loader (.pdf, .docx, .txt, .md).
-  - `vector_store.py`: ChromaDB integration & collection management.
-  - `summarizer.py`: 1-click executive document summarizer.
-  - `router.py`: Autonomous query router (Local RAG vs. Web Search).
-  - `web_search.py`: Live web search fallback engine.
-- `data/`: Local uploads and ChromaDB persistent storage (gitignored).
-- `tests/`: Integration test suites (`test_step1.py`, `test_step2.py`, `test_step3.py`, `test_step4.py`).
+---
 
-## Running Tests
-Run all test suites using unittest:
+## 📚 Technical & User Documentation
 
-```bash
-python -m unittest discover tests
-```
+Dimension includes comprehensive technical manuals and user guides:
 
-## Tests
+### Core Manuals
+- **[Full User Guide](docs/USER_GUIDE.md)**: Comprehensive guide detailing the 6 Studio Views, AST safety choke points, and keyboard shortcuts.
+- **[API Reference (v2)](docs/API_REFERENCE.md)**: Full REST and SSE endpoint documentation for connections, snapshots, diffs, graph cartography, findings, proposals, seeds, and agent runs.
+- **[Sample Datasets & Evaluation Fixtures Guide](docs/SAMPLE_DATASETS_GUIDE.md)**: Walkthroughs and recipes for `shop_messy.db`, `wide_schema.db`, and `ecommerce.sqlite`.
+- **[Architecture & Inter-Agent Contract](docs/ARCHITECTURE_CONTRACT.md)**: Specification for the 13 formal `ToolSpec` definitions, tool risk scoping, and the monotonic SSE streaming agent model.
 
-Run the catalog and search unit tests from the project root:
+### Focused User Guides (`docs/user/`)
+| Guide | Description |
+| :--- | :--- |
+| **[01. Getting Started](docs/user/01-getting-started.md)** | Installation, workbench navigation, and global keyboard shortcuts. |
+| **[02. Connecting Databases](docs/user/02-connecting-databases.md)** | PostgreSQL, MySQL, SQLite, DuckDB, environment tiers, and privilege grading. |
+| **[03. Schema Cartography](docs/user/03-schema-cartography.md)** | ERD navigation, solid vs. dashed edges, confirming relationships, and drift diffing. |
+| **[04. Hygiene & Findings](docs/user/04-hygiene-and-findings.md)** | Anomaly detection, keyboard-driven triage (`J`/`K`/`A`/`D`), and dismiss memory. |
+| **[05. Guarded SQL](docs/user/05-guarded-sql.md)** | AST safety, LIMIT rewrites, EXPLAIN cost guards, and HMAC query tokens. |
+| **[06. Shadow Migrations](docs/user/06-shadow-migrations.md)** | Scratch cloning, two-way rollbacks, lock-risk linter, and Decision D5 prod export. |
+| **[07. Synthetic Seeds](docs/user/07-synthetic-seeds.md)** | Topological Kahn's DAG sorting, cycle breaking, and Faker PII replacement. |
+| **[08. Privacy & Safety](docs/user/08-privacy-and-safety.md)** | Local-first architecture, keychain vault, cloud disclosure, and hash-chained audit trails. |
 
-```bash
-python3 -m unittest discover -s tests -v
-```
+---
 
-The suite uses Python's built-in `unittest` and temporary directories. It does
-not require application dependencies, Ollama, embeddings, or a database, and
-does not read or modify your uploaded documents.
+## 🧪 Testing & Verification
 
-Tests cover inventory metadata, filename filtering and ordering, symlinks,
-special files, missing directories, permission and I/O errors, files changing
-during enumeration, JSON serialization, and read-only behavior. Filesystem
-faults and races are simulated where necessary to keep tests reproducible.
-
-The catalog lists saved files with a `.pdf` extension; it does not validate PDF
-contents or establish indexing readiness. `indexing_status` remains `unknown`.
-Listing is not an atomic snapshot: a file can change after its metadata is read.
-
-## Document agent experiment
-
-The first agent is available as a separate command-line experiment. It can
-choose a document-listing tool, inspect the result, and answer the user. The
-existing web application still uses its original RAG chain.
-
-Use Python 3.12 and a separate environment for this experiment:
+Run the comprehensive test suite (115 tests validating all 7 phases):
 
 ```bash
-python3.12 -m venv .venv-agent
-.venv-agent/bin/python -m pip install -r requirements-agent.txt
-ollama pull qwen3:4b
+# Run all Phase 0 through Phase 7 test suites
+./venv/bin/python -m unittest \
+  tests/test_phase0_foundations.py \
+  tests/test_phase1_connect_and_map.py \
+  tests/test_phase2_profiler_and_infer.py \
+  tests/test_phase3_guarded_nl_sql.py \
+  tests/test_phase4_shadow_migrations.py \
+  tests/test_phase5_seed_generator.py \
+  tests/test_phase6_evaluation_harness.py \
+  tests/test_phase7_m6_hardening.py \
+  tests/test_studio_runs_and_agent.py \
+  tests/test_workbench_ui_integration.py \
+  tests/test_db_manager.py \
+  tests/test_profiler.py \
+  tests/test_squad_c_data_agent.py \
+  tests/test_e2e_data_studio.py \
+  tests/test_mock_datasets_e2e.py \
+  tests/test_output_refiner.py
 ```
 
-With Ollama running, observe the manual model/tool exchange, then the same
-interaction orchestrated by LangGraph:
-
+### Benchmark Evaluation
+Run the automated ground-truth benchmark suite evaluating precision, recall, and safety against planted traps:
 ```bash
-.venv-agent/bin/python -m experiments.document_agent --mode manual "Which documents have I uploaded?"
-.venv-agent/bin/python -m experiments.document_agent --mode graph "Which documents have I uploaded?"
-.venv-agent/bin/python -m experiments.document_agent --mode graph "Hello!"
+./venv/bin/python experiments/evaluate_studio.py
 ```
 
-Both modes print tool requests, tool results, and the final answer. Model
-thinking is kept separate from the printed answer. The default is `qwen3:4b`;
-use `--model` to evaluate a different installed model. Downloads need internet
-access; model inference uses the local Ollama endpoint. These experiment CLIs
-disable external tracing.
+---
 
-```bash
-# Catalog, search, and agent unit tests; no running model needed.
-.venv-agent/bin/python -m unittest discover -v
+## 📄 License
 
-# Six real-model evaluations using synthetic temporary files, not user uploads.
-.venv-agent/bin/python -m experiments.evaluate_document_agent --mode graph
-```
-
-The evaluation writes transcripts and results to `data/agent_evaluation.json`.
-Its answer checks are heuristics, so review the transcripts as well as the pass
-count. The graph limits model/tool calls and reports malformed or truncated
-responses. It does not yet persist chat history or read PDF contents.
-
-Read [the design walkthrough](docs/document-agent-walkthrough.md) for the code
-reading order, environment tradeoffs, execution flow, and testing strategy.
-
-## Document search function
-
-`services/document_search.py` adds `search_documents(query, filename=None,
-limit=4)` (filename and limit are keyword-only). It searches the existing Chroma
-index and returns excerpts, filenames, one-based PDF page numbers, and distances.
-It is not yet connected to the listing agent. Use the original `venv/` for live
-retrieval because it contains the embedding and Chroma dependencies.
-
-```bash
-venv/bin/python -m unittest integration_tests.chroma_search -v
-```
-
-These integration tests use temporary databases and synthetic embeddings. See
-[the search design notes](docs/document-search-design.md) for the function's
-contract, examples, tradeoffs, and the distinction between retrieval correctness
-and semantic-search quality.
+Dimension is open-source software licensed under the [MIT License](LICENSE).

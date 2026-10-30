@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dimension — Technical Document Intelligence</title>
+    <title>Dimension — Autonomous Data & Schema Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
     <script>
         (function() {
@@ -42,12 +42,48 @@
                             <polyline points="2 12 12 17 22 12"></polyline>
                         </svg>
                     </div>
-                    <span class="header-brand-name">Dimension</span>
+                    <span class="header-brand-name">Dimension — Autonomous Data &amp; Schema Studio</span>
                 </div>
             </div>
 
-            <!-- Header Controls: Focus Mode & Minimal Icon-Only Theme Switcher -->
+            <!-- View Switcher Tabs (Chat, Map, Findings, Changes, Glossary, Seeds) -->
+            <nav class="studio-view-tabs" role="tablist">
+                <button class="studio-tab-btn active" data-view="chat" title="AI Chat &amp; Guarded SQL (⌘1)">
+                    <span class="tab-icon">💬</span>
+                    <span class="tab-label">Chat</span>
+                </button>
+                <button class="studio-tab-btn" data-view="map" title="ERD Schema Cartography (⌘2)">
+                    <span class="tab-icon">🗺️</span>
+                    <span class="tab-label">Map</span>
+                </button>
+                <button class="studio-tab-btn" data-view="findings" title="Hygiene &amp; Anomaly Inbox (⌘3)">
+                    <span class="tab-icon">🛡️</span>
+                    <span class="tab-label">Findings</span>
+                    <span id="findings-count-badge" class="tab-badge hidden">0</span>
+                </button>
+                <button class="studio-tab-btn" data-view="changes" title="Shadow Migrations &amp; Approvals (⌘4)">
+                    <span class="tab-icon">⚡</span>
+                    <span class="tab-label">Changes</span>
+                </button>
+                <button class="studio-tab-btn" data-view="glossary" title="Business Glossary Flywheel (⌘5)">
+                    <span class="tab-icon">📖</span>
+                    <span class="tab-label">Glossary</span>
+                </button>
+                <button class="studio-tab-btn" data-view="seeds" title="Topological Seed Generator (⌘6)">
+                    <span class="tab-icon">🌱</span>
+                    <span class="tab-label">Seeds</span>
+                </button>
+            </nav>
+
+            <!-- Header Controls: Connection Selector, Focus Mode & Theme Switcher -->
             <div class="header-controls">
+                <div class="header-connection-selector" title="Active Target Connection">
+                    <span class="conn-pulse-dot" id="conn-tier-indicator"></span>
+                    <select id="active-connection-select" class="header-select connection-dropdown" aria-label="Target Connection">
+                        <option value="">Loading connections...</option>
+                    </select>
+                </div>
+
                 <button id="focus-toggle-btn" class="header-icon-btn focus-toggle-btn" title="Toggle Focus Mode (Cmd+Shift+F)" aria-label="Toggle Focus Mode">
                     <!-- Viewfinder Focus Frame (Default) -->
                     <svg class="focus-icon-expand" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -84,10 +120,7 @@
             <aside class="sidebar" id="sidebar">
                 <div class="sidebar-header">
                     <div class="sidebar-brand-row">
-                        <div class="sidebar-brand-badge">
-                            <span class="dot pulse"></span>
-                            <span>Connected Vault</span>
-                        </div>
+                        <span class="sidebar-brand-title">Data Workspace</span>
                         <button id="sidebar-collapse-btn" class="sidebar-toggle-btn" title="Collapse sidebar (Cmd+B)">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -97,7 +130,66 @@
                     </div>
                 </div>
 
-                <!-- Conversations Section (Multi-Chat) -->
+                <!-- Database Connect Quick Action -->
+                <div class="sidebar-db-connect-box">
+                    <button id="connect-db-btn" class="sidebar-connect-db-btn" type="button" title="Connect to PostgreSQL, MySQL, SQLite, or DuckDB">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                        </svg>
+                        <span>Connect Database</span>
+                    </button>
+                </div>
+
+                <!-- Ingestion Dropzone for Structured Data Files -->
+                <div class="upload-section">
+                    <div id="drop-zone" class="drop-zone">
+                        <div class="drop-zone-content">
+                            <div class="drop-icon-container">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                            </div>
+                            <p class="drop-prompt">Drop datasets or <span class="browse-text">browse files</span></p>
+                            <div class="format-tags">
+                                <span class="format-tag tag-csv">CSV</span>
+                                <span class="format-tag tag-parquet">PARQUET</span>
+                                <span class="format-tag tag-sqlite">SQLITE</span>
+                                <span class="format-tag tag-db">DB</span>
+                            </div>
+                            <input type="file" id="file-input" accept=".csv,.tsv,.parquet,.sqlite,.db" hidden>
+                        </div>
+                    </div>
+                    <div id="upload-status" class="status-message hidden"></div>
+                </div>
+
+                <!-- Tables Inventory Section (Interactive Schema Tree) -->
+                <div class="tables-section">
+                    <div class="section-header-row">
+                        <span class="section-title">Tables (<span id="table-count">0</span>)</span>
+                        <button id="refresh-tables-btn" class="icon-action-btn" title="Refresh introspected database schema">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                            </svg>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+
+                    <div id="tables-list" class="tables-list">
+                        <div class="empty-tables-placeholder">No tables connected yet.</div>
+                    </div>
+
+                    <!-- Hidden legacy placeholders to maintain backward compatibility -->
+                    <span id="doc-count" style="display: none;">0</span>
+                    <div id="documents-list" style="display: none;"></div>
+                    <button id="clear-all-btn" style="display: none;"></button>
+                </div>
+
+                <!-- Conversations Section (Multi-Chat Threads) -->
                 <div class="sessions-section">
                     <div class="section-header-row">
                         <span class="section-title">Threads (<span id="chat-count">0</span>)</span>
@@ -113,109 +205,479 @@
                         <!-- Session rows injected dynamically -->
                     </div>
                 </div>
-                
-                <!-- Upload Dropzone & Knowledge Inventory -->
-                <div class="documents-section">
-                    <div class="section-header-row">
-                        <span class="section-title">Documents (<span id="doc-count">0</span>)</span>
-                        <button id="clear-all-btn" class="clear-all-btn" title="Purge all indexed vectors">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                            <span>Purge</span>
-                        </button>
-                    </div>
-
-                    <div class="upload-section">
-                        <div id="drop-zone" class="drop-zone">
-                            <div class="drop-zone-content">
-                                <div class="drop-icon-container">
-                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                        <polyline points="17 8 12 3 7 8"></polyline>
-                                        <line x1="12" y1="3" x2="12" y2="15"></line>
-                                    </svg>
-                                </div>
-                                <p class="drop-prompt">Drop files or <span class="browse-text">connect vault</span></p>
-                                <div class="format-tags">
-                                    <span class="format-tag tag-pdf">PDF</span>
-                                    <span class="format-tag tag-docx">DOCX</span>
-                                    <span class="format-tag tag-txt">TXT</span>
-                                    <span class="format-tag tag-md">MD</span>
-                                </div>
-                                <input type="file" id="file-input" accept=".pdf,.docx,.txt,.md" hidden>
-                            </div>
-                        </div>
-                        <div id="upload-status" class="status-message hidden"></div>
-                    </div>
-
-                    <div id="documents-list" class="documents-list">
-                        <div class="empty-docs-placeholder">No documents connected yet.</div>
-                    </div>
-                </div>
-                
-                <!-- System Telemetry Footer -->
-                <div class="sidebar-footer">
-                    <div class="status-indicator">
-                        <span class="dot pulse"></span>
-                        <span>Port 8001 &middot; ChromaDB</span>
-                    </div>
-                    <span class="version-badge">v2.6</span>
-                </div>
             </aside>
 
-            <!-- Main Conversation Area -->
+            <!-- Main Conversation & Studio Area -->
             <main class="chat-area">
-                <div id="chat-box" class="chat-box">
-                    <!-- Welcome Hero State injected by default or session messages -->
-                </div>
+                
+                <!-- VIEW 1: AI Chat & Guarded SQL Runner -->
+                <div id="view-chat" class="studio-view active">
+                    <div id="chat-box" class="chat-box">
+                        <!-- Welcome Hero State injected by default or session messages -->
+                    </div>
 
-                <!-- Floating Frosted Command Prompt Dock with Bottom Selectors -->
-                <div class="input-area">
-                    <form id="chat-form">
-                        <input type="text" id="query-input" placeholder="Ask anything across connected documents or search the web..." autocomplete="off" required>
-                        <div class="input-controls">
-                            <span id="key-hint" class="input-shortcut-hint" style="display: none;"></span>
-                            <button type="submit" id="send-btn" class="send-btn" title="Send query (Enter)">
-                                <span class="send-label">Send</span>
-                                <svg class="send-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                                </svg>
-                                <svg class="stop-icon hidden" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                                    <rect x="4" y="4" width="16" height="16" rx="2"></rect>
-                                </svg>
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- Bottom Accessory Bar: Model & Effort Selectors Near Text Entry -->
-                    <div class="dock-accessory-bar">
-                        <div class="dock-selectors">
-                            <div class="selector-group" title="Select LLM Model">
-                                <span class="selector-label">Model</span>
-                                <select id="model-select" class="header-select">
-                                    <option value="llama3">llama3</option>
-                                </select>
+                    <!-- Floating Frosted Command Prompt Dock with Bottom Selectors -->
+                    <div class="input-area">
+                        <form id="chat-form">
+                            <input type="text" id="query-input" placeholder="Ask questions, generate dialect-tuned SQL, profile data anomalies..." autocomplete="off" required>
+                            <div class="input-controls">
+                                <span id="key-hint" class="input-shortcut-hint" style="display: none;"></span>
+                                <button type="submit" id="send-btn" class="send-btn" title="Send query (Enter)">
+                                    <span class="send-label">Send</span>
+                                    <svg class="send-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                    </svg>
+                                    <svg class="stop-icon hidden" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                        <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                                    </svg>
+                                </button>
                             </div>
+                        </form>
 
-                            <div class="selector-group" title="Select Reasoning Effort">
-                                <span class="selector-label">Effort</span>
-                                <select id="effort-select" class="header-select">
-                                    <option value="low">Low (Fast)</option>
-                                    <option value="medium" selected>Medium</option>
-                                    <option value="high">Deep (High)</option>
-                                </select>
+                        <!-- Bottom Accessory Bar: Model, Effort & Safety Selectors -->
+                        <div class="dock-accessory-bar">
+                            <div class="dock-selectors">
+                                <div class="selector-group" title="Select LLM Model">
+                                    <span class="selector-label">Model</span>
+                                    <select id="model-select" class="header-select">
+                                        <option value="llama3">llama3</option>
+                                    </select>
+                                </div>
+
+                                <div class="selector-group" title="Select Reasoning Effort">
+                                    <span class="selector-label">Effort</span>
+                                    <select id="effort-select" class="header-select">
+                                        <option value="low">Low (Fast)</option>
+                                        <option value="medium" selected>Medium</option>
+                                        <option value="high">Deep (High)</option>
+                                    </select>
+                                </div>
+
+                                <!-- Safety Mode Selector -->
+                                <div class="selector-group selector-safety" title="SQL Execution Safety Guardrail">
+                                    <span class="selector-label">Safety</span>
+                                    <select id="safety-mode-select" class="header-select">
+                                        <option value="read_only" selected>Read-Only [Safe]</option>
+                                        <option value="mutation">Mutation Allowed</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- VIEW 2: Interactive ERD Schema Cartography -->
+                <div id="view-map" class="studio-view hidden">
+                    <div class="studio-view-toolbar">
+                        <div class="toolbar-left">
+                            <span class="toolbar-title">Schema Cartography &amp; Inferred Topology</span>
+                            <span id="map-conn-badge" class="badge-pill">No connection</span>
+                            <span id="map-stats-badge" class="badge-pill secondary">0 tables · 0 relations</span>
+                        </div>
+                        <div class="toolbar-right">
+                            <button id="map-infer-btn" class="toolbar-btn primary" title="Run foreign key inference engine to uncover implicit relationships">
+                                <span class="btn-spinner hidden"></span>
+                                <span>⚡ Detect Inferred FKs</span>
+                            </button>
+                            <button id="map-diff-btn" class="toolbar-btn" title="Compare baseline snapshot against live schema">
+                                <span>🔄 Check Drift</span>
+                            </button>
+                            <button id="map-export-mermaid-btn" class="toolbar-btn" title="Export Mermaid ERD diagram">
+                                <span>📊 Export Mermaid</span>
+                            </button>
+                            <button id="map-zoom-fit-btn" class="toolbar-btn icon-only" title="Fit to Screen">
+                                <span>⛶</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Drift Alert Banner -->
+                    <div id="map-drift-banner" class="drift-alert-banner hidden">
+                        <div class="drift-banner-content">
+                            <span class="drift-icon">⚠️</span>
+                            <span id="map-drift-text" class="drift-text">Drift detected!</span>
+                        </div>
+                        <button id="map-drift-dismiss-btn" class="drift-dismiss-btn">✕</button>
+                    </div>
+
+                    <!-- ERD Visualizer Canvas -->
+                    <div id="map-viewport" class="erd-viewport">
+                        <svg id="erd-svg-canvas" class="erd-svg-canvas"></svg>
+                        <div id="erd-nodes-layer" class="erd-nodes-layer">
+                            <!-- Table cards injected dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 3: Data Hygiene & Anomaly Inbox -->
+                <div id="view-findings" class="studio-view hidden">
+                    <div class="studio-view-toolbar">
+                        <div class="toolbar-left">
+                            <span class="toolbar-title">Data Hygiene &amp; Anomaly Inbox</span>
+                            <div class="findings-filter-tabs">
+                                <button class="filter-tab-btn active" data-filter="all">All (<span id="findings-all-count">0</span>)</button>
+                                <button class="filter-tab-btn" data-filter="open">Open (<span id="findings-open-count">0</span>)</button>
+                                <button class="filter-tab-btn" data-filter="critical">Critical (<span id="findings-critical-count">0</span>)</button>
+                                <button class="filter-tab-btn" data-filter="warning">Warning (<span id="findings-warning-count">0</span>)</button>
+                                <button class="filter-tab-btn" data-filter="dismissed">Dismissed (<span id="findings-dismissed-count">0</span>)</button>
+                            </div>
+                            <span class="keyboard-triage-hint" title="Keyboard triage navigation"><kbd>J</kbd>/<kbd>K</kbd> move · <kbd>A</kbd> accept · <kbd>D</kbd> dismiss</span>
+                        </div>
+                        <div class="toolbar-right">
+                            <button id="findings-run-audit-btn" class="toolbar-btn primary" title="Run deep hygiene scan across active connection">
+                                <span class="btn-spinner hidden"></span>
+                                <span>🛡️ Run Hygiene Audit</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="findings-container" class="findings-scroll-container">
+                        <!-- Findings cards injected here -->
+                    </div>
+                </div>
+
+                <!-- VIEW 4: Shadow Migrations & Verification -->
+                <div id="view-changes" class="studio-view hidden">
+                    <div class="studio-view-toolbar">
+                        <div class="toolbar-left">
+                            <span class="toolbar-title">Shadow Migrations &amp; Verification</span>
+                            <span class="badge-pill tier-pill" id="changes-tier-pill">Tier: Sandbox</span>
+                            <span class="safety-advisory-pill" id="changes-safety-advisory">Decision D5: Prod writes require manual export</span>
+                        </div>
+                        <div class="toolbar-right">
+                            <button id="new-proposal-btn" class="toolbar-btn primary" title="Create a new forward/rollback DDL proposal">
+                                <span>➕ New Proposal</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="proposals-container" class="proposals-scroll-container">
+                        <!-- Proposals cards injected here -->
+                    </div>
+                </div>
+
+                <!-- VIEW 5: Schema Memory & Semantic Glossary -->
+                <div id="view-glossary" class="studio-view hidden">
+                    <div class="studio-view-toolbar">
+                        <div class="toolbar-left">
+                            <span class="toolbar-title">Schema Memory &amp; Semantic Glossary</span>
+                            <input type="text" id="glossary-search-input" class="toolbar-search-input" placeholder="Search definitions or business rules..." />
+                        </div>
+                        <div class="toolbar-right">
+                            <button id="new-glossary-btn" class="toolbar-btn primary" title="Add a business rule or column definition">
+                                <span>➕ Add Term</span>
+                            </button>
+                            <button id="glossary-export-markdown-btn" class="toolbar-btn" title="Export full Markdown data dictionary">
+                                <span>📄 Export Markdown</span>
+                            </button>
+                            <button id="glossary-export-dbt-btn" class="toolbar-btn" title="Export dbt sources.yml with schema tests">
+                                <span>📦 Export dbt Sources</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="glossary-container" class="glossary-scroll-container">
+                        <!-- Glossary entries injected here -->
+                    </div>
+                </div>
+
+                <!-- VIEW 6: Topological Seed Generator -->
+                <div id="view-seeds" class="studio-view hidden">
+                    <div class="studio-view-toolbar">
+                        <div class="toolbar-left">
+                            <span class="toolbar-title">Topological Seed Generator</span>
+                            <span class="badge-pill secondary" id="seeds-dag-count-badge">0 tables</span>
+                        </div>
+                        <div class="toolbar-right">
+                            <button id="seeds-generate-sql-btn" class="toolbar-btn primary" title="Generate topological SQL inserts with Faker replacement">
+                                <span>⚡ Generate SQL Inserts</span>
+                            </button>
+                            <button id="seeds-apply-sandbox-btn" class="toolbar-btn" title="Directly seed data into active Sandbox database">
+                                <span class="btn-spinner hidden"></span>
+                                <span>📥 Load into Sandbox</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="seeds-scroll-container">
+                        <div class="seeds-section-card">
+                            <div class="section-card-header">
+                                <span class="section-card-title">Kahn's Topological DAG Insertion Order</span>
+                                <span class="section-card-desc">Guarantees zero foreign key violations by populating parent tables before children</span>
+                            </div>
+                            <div id="seeds-dag-flow" class="seeds-dag-flow">
+                                <!-- Topological sequence steps injected dynamically -->
+                            </div>
+                        </div>
+
+                        <div class="seeds-section-card">
+                            <div class="section-card-header">
+                                <span class="section-card-title">Target Row Counts per Table</span>
+                                <span class="section-card-desc">Configure sample volume for synthetic generation with Faker PII masking</span>
+                            </div>
+                            <div id="seeds-table-configs" class="seeds-grid">
+                                <!-- Per-table row count inputs -->
+                            </div>
+                        </div>
+
+                        <div id="seeds-preview-card" class="seeds-section-card hidden">
+                            <div class="section-card-header">
+                                <span class="section-card-title">Generated SQL Preview</span>
+                                <button id="seeds-copy-sql-btn" class="toolbar-btn icon-only-text" title="Copy SQL to Clipboard">📋 Copy SQL</button>
+                            </div>
+                            <pre id="seeds-sql-code" class="code-preview-block"></pre>
+                        </div>
+                    </div>
+                </div>
+
             </main>
 
         </div>
     </div>
 
+    <!-- Frosted Database Connection Modal -->
+    <div id="db-modal" class="modal-backdrop hidden" aria-hidden="true">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-title-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="modal-title">Connect Database</h3>
+                        <p class="modal-subtitle">Connect PostgreSQL, MySQL, SQLite, or DuckDB with credential vault isolation</p>
+                    </div>
+                </div>
+                <button type="button" id="db-modal-close-btn" class="modal-close-btn" aria-label="Close modal">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="modal-preset-row">
+                    <span class="preset-label">Presets:</span>
+                    <button type="button" class="preset-pill" data-preset="postgresql://postgres:postgres@localhost:5432/analytics" data-engine="postgresql" data-tier="sandbox">PostgreSQL</button>
+                    <button type="button" class="preset-pill" data-preset="sqlite:///data/warehouse.sqlite" data-engine="sqlite" data-tier="sandbox">SQLite Warehouse</button>
+                    <button type="button" class="preset-pill" data-preset="data/sample_datasets/ecommerce.sqlite" data-engine="sqlite" data-tier="sandbox">Demo Store</button>
+                    <button type="button" class="preset-pill" data-preset="data/sample_datasets/shop_messy.db" data-engine="sqlite" data-tier="dev">Messy Retail</button>
+                    <button type="button" class="preset-pill" data-preset="duckdb:///:memory:" data-engine="duckdb" data-tier="sandbox">DuckDB</button>
+                </div>
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="db-name-input" class="form-label">Connection Name</label>
+                        <input type="text" id="db-name-input" class="modal-input" placeholder="e.g. Analytics Data Warehouse" autocomplete="off" />
+                    </div>
+                    <div class="form-group">
+                        <label for="db-tier-select" class="form-label">Deployment Tier</label>
+                        <select id="db-tier-select" class="modal-select">
+                            <option value="sandbox" selected>Sandbox (Safe Testground)</option>
+                            <option value="dev">Dev (Staging Environment)</option>
+                            <option value="prod">Prod (Protected Execution)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="db-connection-input" class="form-label">Connection String URI or File Path</label>
+                    <input type="text" id="db-connection-input" class="modal-input" placeholder="e.g. postgresql://user:password@localhost:5432/dbname or data/mydb.sqlite" autocomplete="off" />
+                    <p class="form-hint">Credentials are isolated in OS Keyring. Production tier enforces strict export-only safety guardrails (Decision D5).</p>
+                </div>
+
+                <div id="db-modal-status" class="status-message hidden"></div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" id="db-modal-cancel-btn" class="modal-btn modal-cancel-btn">Cancel</button>
+                <button type="button" id="db-modal-connect-btn" class="modal-btn modal-submit-btn">
+                    <span class="btn-spinner hidden"></span>
+                    <span>Connect &amp; Introspect</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Migration Proposal Modal -->
+    <div id="new-proposal-modal" class="modal-backdrop hidden" aria-hidden="true">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-title-icon">⚡</div>
+                    <div>
+                        <h3 class="modal-title">New Migration Proposal</h3>
+                        <p class="modal-subtitle">Linted for lock risks and shadow-verified with two-way rollback verification</p>
+                    </div>
+                </div>
+                <button type="button" id="new-proposal-close-btn" class="modal-close-btn" aria-label="Close modal">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="proposal-goal-input" class="form-label">Migration Goal</label>
+                    <input type="text" id="proposal-goal-input" class="modal-input" placeholder="e.g. Add order_status column and index to ord_hdr" autocomplete="off" />
+                </div>
+
+                <div class="form-group">
+                    <label for="proposal-up-sql" class="form-label">Forward Migration (UP SQL)</label>
+                    <textarea id="proposal-up-sql" class="modal-textarea code-font" rows="4" placeholder="ALTER TABLE ord_hdr ADD COLUMN order_status TEXT DEFAULT 'active';&#10;CREATE INDEX idx_ord_hdr_status ON ord_hdr(order_status);"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="proposal-down-sql" class="form-label">Rollback Migration (DOWN SQL)</label>
+                    <textarea id="proposal-down-sql" class="modal-textarea code-font" rows="3" placeholder="DROP INDEX idx_ord_hdr_status;&#10;ALTER TABLE ord_hdr DROP COLUMN order_status;"></textarea>
+                    <p class="form-hint">Shadow DB will execute UP followed by DOWN and verify invariant matching (zero residue).</p>
+                </div>
+
+                <div id="proposal-modal-status" class="status-message hidden"></div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" id="new-proposal-cancel-btn" class="modal-btn modal-cancel-btn">Cancel</button>
+                <button type="button" id="new-proposal-submit-btn" class="modal-btn modal-submit-btn">
+                    <span class="btn-spinner hidden"></span>
+                    <span>Verify &amp; Propose</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Approval / Decision Modal with Typed Confirmation -->
+    <div id="approval-modal" class="modal-backdrop hidden" aria-hidden="true">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-title-icon">🛡️</div>
+                    <div>
+                        <h3 class="modal-title">Approve Migration Proposal</h3>
+                        <p class="modal-subtitle" id="approval-modal-subtitle">Human-in-the-loop authorization gate</p>
+                    </div>
+                </div>
+                <button type="button" id="approval-modal-close-btn" class="modal-close-btn" aria-label="Close modal">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Decision</label>
+                    <select id="approval-decision-select" class="modal-select">
+                        <option value="approved" selected>Approve Migration</option>
+                        <option value="rejected">Reject Migration</option>
+                        <option value="changes_requested">Request Changes</option>
+                    </select>
+                </div>
+
+                <div id="approval-typed-confirm-group" class="form-group">
+                    <label for="approval-typed-input" class="form-label">Typed Confirmation</label>
+                    <p class="form-hint">Type <strong id="approval-expected-text" class="text-highlight">CONFIRM</strong> below to verify intent:</p>
+                    <input type="text" id="approval-typed-input" class="modal-input" placeholder="Type confirmation here..." autocomplete="off" />
+                </div>
+
+                <div class="form-group">
+                    <label for="approval-comment-input" class="form-label">Optional Comments / Audit Notes</label>
+                    <input type="text" id="approval-comment-input" class="modal-input" placeholder="e.g. Reviewed and approved for staging rollout." autocomplete="off" />
+                </div>
+
+                <div id="approval-modal-status" class="status-message hidden"></div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" id="approval-modal-cancel-btn" class="modal-btn modal-cancel-btn">Cancel</button>
+                <button type="button" id="approval-modal-submit-btn" class="modal-btn modal-submit-btn">
+                    <span class="btn-spinner hidden"></span>
+                    <span>Submit Decision</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Glossary Definition Modal -->
+    <div id="new-glossary-modal" class="modal-backdrop hidden" aria-hidden="true">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-title-icon">📖</div>
+                    <div>
+                        <h3 class="modal-title">Add Business Definition</h3>
+                        <p class="modal-subtitle">Attach semantic rules, enum mappings, or join caveats to schema</p>
+                    </div>
+                </div>
+                <button type="button" id="new-glossary-close-btn" class="modal-close-btn" aria-label="Close modal">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="glossary-target-kind" class="form-label">Target Kind</label>
+                        <select id="glossary-target-kind" class="modal-select">
+                            <option value="column" selected>Column</option>
+                            <option value="table">Table</option>
+                            <option value="relationship">Relationship</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="glossary-kind" class="form-label">Rule Kind</label>
+                        <select id="glossary-kind" class="modal-select">
+                            <option value="description" selected>Description</option>
+                            <option value="enum_map">Enum Mapping</option>
+                            <option value="join_rule">Join Rule</option>
+                            <option value="filter_rule">Filter Rule</option>
+                            <option value="caveat">Caveat / Warning</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="glossary-target-input" class="form-label">Target Name</label>
+                    <input type="text" id="glossary-target-input" class="modal-input" placeholder="e.g. ord_hdr.status_code or tbl_cx" autocomplete="off" />
+                </div>
+
+                <div class="form-group">
+                    <label for="glossary-body-input" class="form-label">Business Definition / Rule</label>
+                    <textarea id="glossary-body-input" class="modal-textarea" rows="3" placeholder="Explain the business meaning, enum code meanings, or join caveats..."></textarea>
+                </div>
+
+                <div id="glossary-modal-status" class="status-message hidden"></div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" id="new-glossary-cancel-btn" class="modal-btn modal-cancel-btn">Cancel</button>
+                <button type="button" id="new-glossary-submit-btn" class="modal-btn modal-submit-btn">
+                    <span class="btn-spinner hidden"></span>
+                    <span>Save Definition</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code Viewer & Export Modal -->
+    <div id="code-viewer-modal" class="modal-backdrop hidden" aria-hidden="true">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-title-icon">📄</div>
+                    <div>
+                        <h3 class="modal-title" id="code-viewer-title">Export Artifact</h3>
+                        <p class="modal-subtitle" id="code-viewer-subtitle">Generated schema artifact</p>
+                    </div>
+                </div>
+                <button type="button" id="code-viewer-close-btn" class="modal-close-btn" aria-label="Close modal">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <pre id="code-viewer-content" class="code-preview-block modal-code-view"></pre>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" id="code-viewer-copy-btn" class="modal-btn modal-submit-btn">
+                    <span>📋 Copy to Clipboard</span>
+                </button>
+                <button type="button" id="code-viewer-done-btn" class="modal-btn modal-cancel-btn">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frontend Modular Scripts -->
+    <script src="/static/data_grid.js"></script>
+    <script src="/static/sql_runner.js"></script>
+    <script src="/static/studio_workbench.js"></script>
     <script src="/static/app.js"></script>
 </body>
 </html>

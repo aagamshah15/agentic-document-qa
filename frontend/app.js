@@ -1,6 +1,7 @@
 /**
- * Agentic Document Q&A - Frontend Application Controller
- * Multi-Chat Sessions, Dynamic Model/Effort Selection & Stream Interruption
+ * Dimension — Autonomous Data & Schema Studio
+ * Frontend Application Controller
+ * Multi-Chat Sessions, Schema Cartography, Executable SQL Runner, Interactive Data Grid
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -23,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const activeChatTitle = document.getElementById('active-chat-title');
     const modelSelect = document.getElementById('model-select');
     const effortSelect = document.getElementById('effort-select');
+    const safetyModeSelect = document.getElementById('safety-mode-select');
     const activeModelBadge = document.getElementById('active-model-badge');
     const sidebar = document.getElementById('sidebar');
     const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
@@ -32,6 +34,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeLabel = document.getElementById('theme-label');
     const focusToggleBtn = document.getElementById('focus-toggle-btn');
     const appContainer = document.querySelector('.app-container') || document.body;
+
+    // Data Studio Schema & Modal References
+    const connectDbBtn = document.getElementById('connect-db-btn');
+    const dbModal = document.getElementById('db-modal');
+    const dbModalCloseBtn = document.getElementById('db-modal-close-btn');
+    const dbModalCancelBtn = document.getElementById('db-modal-cancel-btn');
+    const dbModalConnectBtn = document.getElementById('db-modal-connect-btn');
+    const dbConnectionInput = document.getElementById('db-connection-input');
+    const dbModalStatus = document.getElementById('db-modal-status');
+    const tablesList = document.getElementById('tables-list');
+    const tableCount = document.getElementById('table-count');
+    const refreshTablesBtn = document.getElementById('refresh-tables-btn');
+    const sidebarEngineName = document.getElementById('sidebar-engine-name');
+    const sidebarTelemetryText = document.getElementById('sidebar-telemetry-text');
 
     // Focus Mode Engine (Distraction-Free Deep Canvas)
     let isFocusMode = localStorage.getItem('dimension_focus_mode') === '1';
@@ -92,7 +108,9 @@ document.addEventListener('DOMContentLoaded', () => {
             themeToggleBtn.title = nextLabel;
             themeToggleBtn.setAttribute('aria-label', nextLabel);
         }
-        window.dispatchEvent(new CustomEvent('dimension:themechange', { detail: { theme } }));
+        if (typeof CustomEvent !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('dimension:themechange', { detail: { theme } }));
+        }
     };
     applyTheme(currentTheme);
 
@@ -108,6 +126,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentAbortController = null;
     let selectedModel = 'llama3';
     let selectedEffort = 'medium';
+    let selectedSafetyMode = 'read_only';
+    let currentSchema = null;
 
     // SVG Micro-Icon Library (Lucide/Phosphor Style)
     const ICONS = {
@@ -123,23 +143,26 @@ document.addEventListener('DOMContentLoaded', () => {
         chat: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
         </svg>`,
+        table: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="9" y1="21" x2="9" y2="9"></line>
+        </svg>`,
+        key: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7.5" cy="15.5" r="5.5"></circle>
+            <path d="m21 2-9.6 9.6"></path>
+            <path d="m15.5 7.5 3 3L22 7l-3-3"></path>
+        </svg>`,
         docPdf: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
             <polyline points="14 2 14 8 20 8"></polyline>
             <line x1="16" y1="13" x2="8" y2="13"></line>
             <line x1="16" y1="17" x2="8" y2="17"></line>
         </svg>`,
-        docWord: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="8" y1="13" x2="16" y2="13"></line>
-            <line x1="8" y1="17" x2="16" y2="17"></line>
-        </svg>`,
-        docText: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
+        docData: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
         </svg>`,
         routeLocal: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
@@ -156,13 +179,6 @@ document.addEventListener('DOMContentLoaded', () => {
             <polyline points="15 3 21 3 21 9"></polyline>
             <line x1="10" y1="14" x2="21" y2="3"></line>
         </svg>`,
-        summarize: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-        </svg>`,
-        trash: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-        </svg>`,
         pencil: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
         </svg>`,
@@ -175,6 +191,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <rect x="1" y="3" width="22" height="5"></rect>
             <line x1="10" y1="12" x2="14" y2="12"></line>
         </svg>`,
+        trash: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>`,
         dots: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="1.5"></circle>
             <circle cx="19" cy="12" r="1.5"></circle>
@@ -182,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </svg>`
     };
 
-    // Utilities: HTML escape & Session Title Formatter (Fixed length with ellipsis)
+    // Utilities
     const escapeHtml = (str) => {
         if (!str) return '';
         return String(str)
@@ -200,7 +220,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return trimmed.substring(0, maxLen).trimEnd() + '...';
     };
 
-    // Utility: Format bytes cleanly
     const formatBytes = (bytes) => {
         if (!bytes || bytes === 0) return '0 B';
         const k = 1024;
@@ -238,7 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', toggleSidebar);
     if (sidebarCollapseBtn) sidebarCollapseBtn.addEventListener('click', toggleSidebar);
 
-    // Restore persistent sidebar state
     try {
         if (localStorage.getItem('sidebar_collapsed') === '1' && sidebar) {
             sidebar.classList.add('collapsed');
@@ -246,25 +264,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     } catch (e) {}
 
-    // Global Keyboard Shortcuts & Click-Outside Handlers
+    // Global Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
-        // Cmd+K / Ctrl+K: New Chat Window / Welcome Page
         if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
             e.preventDefault();
             startNewChat();
         }
-        // Cmd+Shift+F / Ctrl+Shift+F: Toggle Focus Mode
         if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
             e.preventDefault();
             applyFocusMode(!isFocusMode);
         }
-        // Cmd+B / Ctrl+B: Toggle Sidebar
         if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'b') {
             e.preventDefault();
             toggleSidebar();
         }
-        // Escape: Close open session dropdown or stop generation
         if (e.key === 'Escape') {
+            if (dbModal && !dbModal.classList.contains('hidden')) {
+                closeDbModal();
+                return;
+            }
             if (activeDropdownMenu) {
                 closeAllDropdowns();
                 return;
@@ -276,7 +294,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Close any active 3-dot dropdown menu when clicking anywhere outside
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.session-dropdown-menu') && !e.target.closest('.session-menu-trigger')) {
             closeAllDropdowns();
@@ -284,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==========================================================================
-    // 1. Model & Effort Settings
+    // 1. Model, Effort & Safety Settings
     // ==========================================================================
     const fetchModels = async () => {
         try {
@@ -342,8 +359,280 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Safety Mode Selector
+    if (safetyModeSelect) {
+        const selectorGroup = safetyModeSelect.closest ? safetyModeSelect.closest('.selector-safety') : null;
+        safetyModeSelect.addEventListener('change', (e) => {
+            selectedSafetyMode = e.target.value;
+            if (selectorGroup) {
+                selectorGroup.classList.toggle('mutation-mode', selectedSafetyMode === 'mutation');
+            }
+        });
+    }
+
     // ==========================================================================
-    // 2. Multi-Chat Sessions, Pinned Threads & Inline Options Menu
+    // 2. Database Connection Modal & Introspection
+    // ==========================================================================
+    const openDbModal = () => {
+        if (!dbModal) return;
+        dbModal.classList.remove('hidden');
+        dbModal.setAttribute('aria-hidden', 'false');
+        if (dbConnectionInput) {
+            dbConnectionInput.focus();
+        }
+    };
+
+    const closeDbModal = () => {
+        if (!dbModal) return;
+        dbModal.classList.add('hidden');
+        dbModal.setAttribute('aria-hidden', 'true');
+        if (dbModalStatus) {
+            dbModalStatus.classList.add('hidden');
+            dbModalStatus.textContent = '';
+        }
+    };
+
+    if (connectDbBtn) connectDbBtn.addEventListener('click', openDbModal);
+    if (dbModalCloseBtn) dbModalCloseBtn.addEventListener('click', closeDbModal);
+    if (dbModalCancelBtn) dbModalCancelBtn.addEventListener('click', closeDbModal);
+
+    // Click outside modal card to close
+    if (dbModal) {
+        dbModal.addEventListener('click', (e) => {
+            if (e.target === dbModal) closeDbModal();
+        });
+    }
+
+    // Quick Presets
+    document.querySelectorAll('.preset-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+            if (dbConnectionInput && pill.dataset.preset) {
+                dbConnectionInput.value = pill.dataset.preset;
+                dbConnectionInput.focus();
+            }
+        });
+    });
+
+    // Connect & Introspect Submission handled by Studio Workbench v2
+    // Expose renderTables for Studio Workbench synchronization
+    window.DimensionRenderTables = (tables) => renderTables(tables);
+
+    const showModalStatus = (msg, type) => {
+        if (!dbModalStatus) return;
+        dbModalStatus.textContent = msg;
+        dbModalStatus.className = `status-message ${type}`;
+        dbModalStatus.classList.remove('hidden');
+    };
+
+    const updateEngineTelemetry = (engine, dbName) => {
+        // Redundant Vault/Telemetry labels removed per design requirements
+    };
+
+    // ==========================================================================
+    // 3. Schema & Tables Tree Management
+    // ==========================================================================
+    const fetchSchema = async () => {
+        try {
+            const res = await fetch('/api/db/schema');
+            if (!res.ok) {
+                // If service initializing or no active connection, show clean placeholder
+                renderTables([]);
+                return;
+            }
+            const data = await res.json();
+            currentSchema = data;
+            updateEngineTelemetry(data.engine, data.database_name);
+            renderTables(data.tables || []);
+        } catch (err) {
+            renderTables([]);
+        }
+    };
+
+    if (refreshTablesBtn) {
+        refreshTablesBtn.addEventListener('click', () => {
+            fetchSchema();
+        });
+    }
+
+    const renderTables = (tables) => {
+        if (tableCount) tableCount.textContent = tables.length;
+        if (!tablesList) return;
+
+        if (tables.length === 0) {
+            tablesList.innerHTML = `
+                <div class="empty-tables-placeholder">
+                    No tables connected yet.<br>
+                    <span class="empty-sub" style="font-size: 10px; color: var(--text-subtle);">Upload dataset or connect database</span>
+                </div>
+            `;
+            return;
+        }
+
+        tablesList.innerHTML = '';
+        tables.forEach(tbl => {
+            const item = document.createElement('div');
+            item.className = 'table-item';
+
+            const formattedRowCount = tbl.row_count >= 1000 
+                ? (tbl.row_count / 1000).toFixed(1) + 'k' 
+                : tbl.row_count;
+
+            item.innerHTML = `
+                <div class="table-item-header">
+                    <div class="table-item-left">
+                        <span class="table-icon">${ICONS.table}</span>
+                        <span class="table-name" title="${tbl.name}">${escapeHtml(tbl.name)}</span>
+                    </div>
+                    <div class="table-item-right">
+                        <span class="table-row-count-badge">${formattedRowCount} rows</span>
+                        <span class="table-chevron">▸</span>
+                    </div>
+                </div>
+                <div class="table-columns-drawer hidden">
+                    <div class="columns-list">
+                        ${(tbl.columns || []).map(col => `
+                            <div class="column-row" title="${col.name} (${col.data_type})">
+                                <div class="column-name-group">
+                                    ${col.primary_key ? `<span class="column-pk-icon" title="Primary Key">🔑</span>` : ''}
+                                    <span class="column-name">${escapeHtml(col.name)}</span>
+                                </div>
+                                <div class="column-meta-group">
+                                    <span class="column-type">${escapeHtml(col.data_type)}</span>
+                                    <span class="column-null-pill">${col.nullable ? 'null' : 'req'}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="table-drawer-actions">
+                        <button type="button" class="table-drawer-btn query-sample-btn" title="Run sample query">
+                            <span>Sample 10</span>
+                        </button>
+                        <button type="button" class="table-drawer-btn profile-table-btn" title="Run anomaly & hygiene scan">
+                            <span>Profile</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            const header = item.querySelector('.table-item-header');
+            const drawer = item.querySelector('.table-columns-drawer');
+            header.addEventListener('click', () => {
+                const isOpen = item.classList.toggle('open');
+                drawer.classList.toggle('hidden', !isOpen);
+            });
+
+            // Action: Sample 10 rows
+            const sampleBtn = item.querySelector('.query-sample-btn');
+            sampleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (queryInput && chatForm) {
+                    queryInput.value = `SELECT * FROM ${tbl.name} LIMIT 10;`;
+                    chatForm.dispatchEvent(new Event('submit', { cancelable: true }));
+                }
+            });
+
+            // Action: Profile table
+            const profileBtn = item.querySelector('.profile-table-btn');
+            profileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (queryInput && chatForm) {
+                    queryInput.value = `Profile table ${tbl.name} and detect any anomalies, distribution skew, or PII risks.`;
+                    chatForm.dispatchEvent(new Event('submit', { cancelable: true }));
+                }
+            });
+
+            tablesList.appendChild(item);
+        });
+    };
+
+    // ==========================================================================
+    // 4. File Upload & Data Ingestion (.csv, .tsv, .parquet, .sqlite, .db)
+    // ==========================================================================
+    const handleFile = async (file) => {
+        if (!file) return;
+        const fileName = file.name.toLowerCase();
+
+        const dbExtensions = ['.csv', '.tsv', '.parquet', '.pq', '.sqlite', '.sqlite3', '.db'];
+        const isDbFile = dbExtensions.some(ext => fileName.endsWith(ext));
+
+        if (!isDbFile) {
+            showStatus(`Format not supported: "${file.name}". Dimension Data Studio only accepts structured database & tabular files (.csv, .tsv, .parquet, .sqlite, .db). Document formats (.pdf, .docx, .txt, .md) are not supported.`, 'error');
+            return;
+        }
+
+        showStatus(`Ingesting and introspecting ${file.name}...`, 'success');
+        dropZone.style.pointerEvents = 'none';
+        dropZone.style.opacity = '0.6';
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            // Ingest directly into active SQL database engine
+            const response = await fetch('/api/db/connect', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                showStatus(`Successfully attached dataset ${file.name}!`, 'success');
+                currentSchema = data;
+                renderTables(data.tables || []);
+                updateEngineTelemetry(data.engine, file.name);
+            } else {
+                showStatus(data.detail || data.error || 'Dataset ingestion failed.', 'error');
+            }
+        } catch (error) {
+            showStatus('Network error during ingestion.', 'error');
+        } finally {
+            dropZone.style.pointerEvents = 'auto';
+            dropZone.style.opacity = '1';
+        }
+    };
+
+    const showStatus = (msg, type) => {
+        if (!statusMsg) return;
+        statusMsg.textContent = msg;
+        statusMsg.className = `status-message ${type}`;
+        statusMsg.classList.remove('hidden');
+    };
+
+    // Drag-and-drop events
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        if (dropZone) dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    if (dropZone) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const file = e.dataTransfer.files[0];
+            handleFile(file);
+        });
+
+        dropZone.addEventListener('click', () => fileInput && fileInput.click());
+    }
+
+    if (fileInput) {
+        fileInput.addEventListener('change', function () {
+            handleFile(this.files[0]);
+        });
+    }
+
+    // ==========================================================================
+    // 5. Multi-Chat Sessions & Options Menu
     // ==========================================================================
     let activeDropdownMenu = null;
 
@@ -415,9 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        input.addEventListener('blur', () => {
-            saveRename();
-        });
+        input.addEventListener('blur', saveRename);
     };
 
     const toggleSessionDropdown = (sessionItem, s) => {
@@ -449,28 +736,24 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
         `;
 
-        // Rename click
         menu.querySelector('.rename-opt').addEventListener('click', (e) => {
             e.stopPropagation();
             closeAllDropdowns();
             startInlineRename(sessionItem, s);
         });
 
-        // Pin / Unpin click
         menu.querySelector('.pin-opt').addEventListener('click', async (e) => {
             e.stopPropagation();
             closeAllDropdowns();
             await updateSessionProperty(s.id, { pinned: !s.pinned });
         });
 
-        // Archive / Unarchive click
         menu.querySelector('.archive-opt').addEventListener('click', async (e) => {
             e.stopPropagation();
             closeAllDropdowns();
             await updateSessionProperty(s.id, { archived: !s.archived });
         });
 
-        // Delete click
         menu.querySelector('.delete-opt').addEventListener('click', async (e) => {
             e.stopPropagation();
             closeAllDropdowns();
@@ -506,14 +789,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const sessions = data.sessions || [];
             renderSessions(sessions);
             
-            // Check if user previously had an active thread in this browser session
             const savedSession = sessionStorage.getItem('dimension_active_session');
             if (savedSession && sessions.some(s => s.id === savedSession)) {
                 if (activeSessionId !== savedSession) {
                     loadSession(savedSession);
                 }
             } else if (!activeSessionId) {
-                // Default to Welcome Page on fresh start
                 startNewChat();
             }
         } catch (err) {
@@ -524,7 +805,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderSessions = (sessions) => {
         if (!sessionsList) return;
 
-        // Separate active vs archived sessions
         const activeSessions = sessions.filter(s => !s.archived);
         const archivedSessions = sessions.filter(s => s.archived);
 
@@ -557,7 +837,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </button>
             `;
 
-            // Select thread when clicking row (ignoring menu or inline rename clicks)
             item.addEventListener('click', (e) => {
                 if (e.target.closest('.session-menu-trigger') || e.target.closest('.session-dropdown-menu') || e.target.closest('.session-inline-rename-input')) {
                     return;
@@ -567,7 +846,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 3-dot options trigger
             const menuTrigger = item.querySelector('.session-menu-trigger');
             menuTrigger.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -577,12 +855,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return item;
         };
 
-        // Render active (and pinned) sessions
         activeSessions.forEach(s => {
             sessionsList.appendChild(renderRow(s));
         });
 
-        // Collapsible archived threads section if any exist
         if (archivedSessions.length > 0) {
             const archiveSection = document.createElement('div');
             archiveSection.className = 'archived-sessions-wrapper';
@@ -636,44 +912,46 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     };
 
-    // Dimension Welcome Hero Component with Clickable Instant Capabilities
+    // ==========================================================================
+    // 6. Welcome Hero with Data Studio Instant Workflows
+    // ==========================================================================
     const renderWelcomeHero = () => {
         return `
             <div class="welcome-hero-container">
                 <h1 class="welcome-hero-title">
-                    All your documents,<br><span class="welcome-gradient-text">one search away.</span>
+                    All your data &amp; schemas,<br><span class="welcome-gradient-text">instantly introspected.</span>
                 </h1>
                 <p class="welcome-hero-desc">
-                    Connect your engineering whitepapers, architecture specifications, and code repositories. The agent searches local ChromaDB vectors with autonomous web fallbacks.
+                    Autonomous schema cartography, anomaly hygiene scans, and dialect-tuned SQL queries powered by in-memory DuckDB, PostgreSQL, MySQL, and SQLite engines.
                 </p>
                 <div class="capability-card">
-                    <div class="capability-header">Instant Capabilities</div>
-                    <div class="capability-row" data-prompt="Explain the hybrid retrieval strategy between local ChromaDB and autonomous web search.">
+                    <div class="capability-header">Instant Studio Capabilities</div>
+                    <div class="capability-row" data-prompt="Run schema cartography on active tables, detect foreign key relationships, and identify orphan tables.">
                         <div class="capability-row-left">
                             <span class="capability-index">01</span>
                             <div>
-                                <div class="capability-name">Cross-Document Hybrid Retrieval</div>
-                                <div class="capability-sub">Vector embeddings cross-referenced against real-time web intelligence.</div>
+                                <div class="capability-name">Schema Cartography &amp; Orphan Detection</div>
+                                <div class="capability-sub">Introspect active tables, detect relational edges, and build schema dependency graphs.</div>
                             </div>
                         </div>
                         <span class="capability-arrow">→</span>
                     </div>
-                    <div class="capability-row" data-prompt="How does the streaming query pipeline handle user stream interruption with AbortController?">
+                    <div class="capability-row" data-prompt="Perform an anomaly and PII hygiene scan across tables to detect null bursts and sensitive data leaks.">
                         <div class="capability-row-left">
                             <span class="capability-index">02</span>
                             <div>
-                                <div class="capability-name">Zero-Latency Stream Cancellation</div>
-                                <div class="capability-sub">Instant SSE socket termination with partial token persistence.</div>
+                                <div class="capability-name">Anomaly &amp; PII Hygiene Scan</div>
+                                <div class="capability-sub">Continuous telemetry on null rates, distribution skew, and unmasked PII columns.</div>
                             </div>
                         </div>
                         <span class="capability-arrow">→</span>
                     </div>
-                    <div class="capability-row" data-prompt="Summarize system_architecture.pdf and identify key bottlenecks.">
+                    <div class="capability-row" data-prompt="Generate an optimized SQL query to extract the top active records with aggregations.">
                         <div class="capability-row-left">
                             <span class="capability-index">03</span>
                             <div>
-                                <div class="capability-name">Context Graph Evidence Nodes</div>
-                                <div class="capability-sub">Every assertion verified with source page and cosine distance scores.</div>
+                                <div class="capability-name">Instant SQL Query &amp; Data Extraction</div>
+                                <div class="capability-sub">Dialect-tuned queries with 1-click execution and interactive data grid analytics.</div>
                             </div>
                         </div>
                         <span class="capability-arrow">→</span>
@@ -683,7 +961,6 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     };
 
-    // Delegate clicks on Instant Capability Rows to populate and auto-submit prompt
     if (chatBox) {
         chatBox.addEventListener('click', (e) => {
             const row = e.target.closest('.capability-row');
@@ -702,7 +979,6 @@ document.addEventListener('DOMContentLoaded', () => {
             sessionStorage.setItem('dimension_active_session', sessionId);
         } catch (e) {}
         
-        // Highlight active session item in sidebar
         document.querySelectorAll('.session-item').forEach(el => {
             el.classList.toggle('active', el.dataset.sessionId === sessionId);
         });
@@ -726,7 +1002,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             updateModelBadge();
 
-            // Render messages (Show Welcome Hero if empty thread)
             chatBox.innerHTML = '';
             if (messages.length === 0) {
                 chatBox.innerHTML = renderWelcomeHero();
@@ -737,7 +1012,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             chatBox.scrollTop = chatBox.scrollHeight;
             
-            // Re-affirm active highlight in sidebar
             document.querySelectorAll('.session-item').forEach(el => {
                 el.classList.toggle('active', el.dataset.sessionId === sessionId);
             });
@@ -765,297 +1039,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sidebarNewChatBtn) sidebarNewChatBtn.addEventListener('click', startNewChat);
 
     // ==========================================================================
-    // 3. Document Management Logic
+    // 7. Backward-Compatible Document Helpers
     // ==========================================================================
     const fetchDocuments = async () => {
         try {
             const res = await fetch('/api/documents');
             if (!res.ok) return;
             const data = await res.json();
-            renderDocuments(data.documents || []);
-        } catch (err) {
-            console.error('Failed to load documents:', err);
-        }
-    };
-
-    const renderDocuments = (docs) => {
-        if (docCount) docCount.textContent = docs.length;
-        if (!documentsList) return;
-
-        if (docs.length === 0) {
-            documentsList.innerHTML = '<div class="empty-docs-placeholder">No documents indexed yet.</div>';
-            return;
-        }
-
-        documentsList.innerHTML = '';
-        docs.forEach(doc => {
-            const item = document.createElement('div');
-            item.className = 'doc-item';
-
-            const ext = doc.filename.split('.').pop().toLowerCase();
-            let iconSvg = ICONS.docText;
-            if (ext === 'pdf') iconSvg = ICONS.docPdf;
-            else if (ext === 'docx') iconSvg = ICONS.docWord;
-
-            item.innerHTML = `
-                <div class="doc-icon">${iconSvg}</div>
-                <div class="doc-info" title="${doc.filename}">
-                    <div class="doc-name">${doc.filename}</div>
-                    <div class="doc-meta">
-                        <span class="doc-badge">${doc.chunk_count} chunks</span>
-                        <span>${formatBytes(doc.size_bytes)}</span>
-                    </div>
-                </div>
-                <div class="doc-actions">
-                    <button class="doc-action-btn doc-summarize-btn" title="Summarize document">
-                        ${ICONS.summarize}
-                    </button>
-                    <button class="doc-action-btn doc-delete-btn" title="Delete document">
-                        ${ICONS.trash}
-                    </button>
-                </div>
-            `;
-
-            const sumBtn = item.querySelector('.doc-summarize-btn');
-            sumBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                triggerDocumentSummary(doc.filename);
-            });
-
-            const delBtn = item.querySelector('.doc-delete-btn');
-            delBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                deleteDocument(doc.filename);
-            });
-
-            documentsList.appendChild(item);
-        });
-    };
-
-    const deleteDocument = async (filename) => {
-        if (!confirm(`Delete "${filename}" and its vector embeddings?`)) return;
-
-        showStatus(`Deleting ${filename}...`, 'success');
-        try {
-            const res = await fetch(`/api/documents/${encodeURIComponent(filename)}`, {
-                method: 'DELETE'
-            });
-            const data = await res.json();
-            if (res.ok) {
-                showStatus(data.message, 'success');
-                await fetchDocuments();
-            } else {
-                showStatus(data.detail || 'Failed to delete document.', 'error');
-            }
-        } catch (err) {
-            showStatus('Network error while deleting document.', 'error');
-        }
-    };
-
-    const clearAllDocuments = async () => {
-        if (!confirm('Are you sure you want to delete ALL indexed documents and reset the Chroma database?')) return;
-
-        showStatus('Clearing all documents...', 'success');
-        try {
-            const res = await fetch('/api/documents/clear', {
-                method: 'POST'
-            });
-            const data = await res.json();
-            if (res.ok) {
-                showStatus(data.message, 'success');
-                await fetchDocuments();
-            } else {
-                showStatus(data.detail || 'Failed to clear documents.', 'error');
-            }
-        } catch (err) {
-            showStatus('Network error while clearing documents.', 'error');
-        }
-    };
-
-    if (clearAllBtn) {
-        clearAllBtn.addEventListener('click', clearAllDocuments);
-    }
-
-    // ==========================================================================
-    // 4. File Upload & Drag-and-Drop
-    // ==========================================================================
-    const handleFile = async (file) => {
-        if (!file) return;
-        const validExtensions = ['.pdf', '.docx', '.txt', '.md'];
-        const fileName = file.name.toLowerCase();
-        const isValid = validExtensions.some(ext => fileName.endsWith(ext));
-
-        if (!isValid) {
-            showStatus('Please upload a valid PDF, DOCX, TXT, or MD file.', 'error');
-            return;
-        }
-
-        showStatus(`Uploading and embedding ${file.name}...`, 'success');
-        dropZone.style.pointerEvents = 'none';
-        dropZone.style.opacity = '0.6';
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showStatus(data.message, 'success');
-                await fetchDocuments();
-            } else {
-                showStatus(data.detail || 'Upload failed.', 'error');
-            }
-        } catch (error) {
-            showStatus('Network error during upload.', 'error');
-        } finally {
-            dropZone.style.pointerEvents = 'auto';
-            dropZone.style.opacity = '1';
-        }
-    };
-
-    const showStatus = (msg, type) => {
-        statusMsg.textContent = msg;
-        statusMsg.className = `status-message ${type}`;
-        statusMsg.classList.remove('hidden');
-    };
-
-    // Drag-and-drop events
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, preventDefaults, false);
-    });
-
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
-    });
-
-    dropZone.addEventListener('drop', (e) => {
-        const file = e.dataTransfer.files[0];
-        handleFile(file);
-    });
-
-    dropZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', function() {
-        handleFile(this.files[0]);
-    });
-
-    // ==========================================================================
-    // 5. Document Summaries with Stream Interruption
-    // ==========================================================================
-    const triggerDocumentSummary = async (filename) => {
-        if (!activeSessionId) await createNewChat();
-
-        const queryText = `Summarize "${filename}"`;
-        appendMessage(queryText, 'user');
-        appendTypingIndicator();
-
-        currentAbortController = new AbortController();
-        setGenerating(true);
-
-        try {
-            const response = await fetch(`/api/documents/${encodeURIComponent(filename)}/summarize/stream`, {
-                method: 'POST',
-                signal: currentAbortController.signal
-            });
-
-            if (!response.ok) {
-                removeTypingIndicator();
-                setGenerating(false);
-                const errData = await response.json().catch(() => ({}));
-                appendMessage('Error: ' + (errData.detail || 'Failed to generate summary.'), 'assistant');
-                return;
-            }
-
-            let assistantMsgBubble = null;
-            let textElement = null;
-            let fullSummary = '';
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder('utf-8');
-            let buffer = '';
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop();
-
-                for (const line of lines) {
-                    const trimmed = line.trim();
-                    if (!trimmed || !trimmed.startsWith('data: ')) continue;
-                    const jsonStr = trimmed.substring(6);
-                    try {
-                        const payload = JSON.parse(jsonStr);
-
-                        if (payload.token) {
-                            if (!assistantMsgBubble) {
-                                removeTypingIndicator();
-                                const bubbleData = createStreamingAssistantBubble();
-                                assistantMsgBubble = bubbleData.container;
-                                textElement = bubbleData.textSpan;
-                            }
-                            fullSummary += payload.token;
-                            textElement.textContent = fullSummary;
-                            chatBox.scrollTop = chatBox.scrollHeight;
-                        }
-
-                        if (payload.done) {
-                            removeTypingIndicator();
-                            setGenerating(false);
-                            if (!assistantMsgBubble) {
-                                const bubbleData = createStreamingAssistantBubble();
-                                assistantMsgBubble = bubbleData.container;
-                                textElement = bubbleData.textSpan;
-                                textElement.textContent = fullSummary || 'Document summary complete.';
-                            }
-                        }
-
-                        if (payload.error) {
-                            removeTypingIndicator();
-                            setGenerating(false);
-                            if (!assistantMsgBubble) {
-                                appendMessage('Error: ' + payload.error, 'assistant');
-                            } else {
-                                textElement.textContent += '\n\n[Error: ' + payload.error + ']';
-                            }
-                        }
-                    } catch (parseErr) {
-                        console.error('Error parsing summary SSE chunk:', parseErr);
-                    }
-                }
-            }
-        } catch (error) {
-            removeTypingIndicator();
-            setGenerating(false);
-            if (error.name === 'AbortError') {
-                console.log('Summary stream stopped by user.');
-            } else {
-                appendMessage('Network error while requesting document summary.', 'assistant');
-            }
-        } finally {
-            setGenerating(false);
-            fetchSessions();
-        }
+            if (docCount) docCount.textContent = (data.documents || []).length;
+        } catch (err) {}
     };
 
     // ==========================================================================
-    // 6. Citations, Provenance & Chat Rendering
+    // 8. Citations & Message Rendering
     // ==========================================================================
     const attachSourcesToBubble = (contentDiv, sources, route = 'local_context') => {
         if (!sources || sources.length === 0) return;
@@ -1069,7 +1065,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleBtn.type = 'button';
         toggleBtn.innerHTML = `
             ${isWeb ? ICONS.routeWeb : ICONS.routeLocal}
-            <span>${isWeb ? 'Web Sources' : 'Document Sources'} (${sources.length})</span>
+            <span>${isWeb ? 'Web Sources' : 'Context Citations'} (${sources.length})</span>
             <svg class="arrow-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
@@ -1103,7 +1099,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${titleHtml}
                     ${src.page !== null && src.page !== undefined ? `<span class="source-page-badge">Page ${src.page}</span>` : ''}
                 </div>
-                <div class="source-snippet">"${src.snippet}"</div>
+                <div class="source-snippet">"${escapeHtml(src.snippet)}"</div>
             `;
             sourcesList.appendChild(card);
         });
@@ -1124,7 +1120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (route === 'web_search') {
             return `${ICONS.routeWeb} <span>${isSearching ? 'Searching web...' : 'Web Search'}</span>`;
         }
-        return `${ICONS.routeLocal} <span>Local Knowledge</span>`;
+        return `${ICONS.routeLocal} <span>Schema &amp; Data Engine</span>`;
     };
 
     const appendMessage = (content, sender, sources = [], route = null, autoScroll = true) => {
@@ -1147,7 +1143,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const textSpan = document.createElement('div');
         textSpan.className = 'message-text';
-        textSpan.textContent = content;
+
+        // Render Markdown with Executable SQL Runners if assistant
+        if (sender === 'assistant' && window.DimensionSqlRunner) {
+            window.DimensionSqlRunner.renderMarkdownWithSql(content, textSpan);
+        } else {
+            textSpan.textContent = content;
+        }
+
         contentDiv.appendChild(textSpan);
 
         if (sender === 'assistant' && sources && sources.length > 0) {
@@ -1223,12 +1226,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ==========================================================================
-    // 7. Chat Submission & Real-Time Stream Interruption
+    // 9. Query Submission & Autonomous Streaming
     // ==========================================================================
     chatForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        // If currently generating, clicking the button triggers STOP
         if (currentAbortController) {
             currentAbortController.abort();
             return;
@@ -1241,17 +1243,14 @@ document.addEventListener('DOMContentLoaded', () => {
             await createNewChat(query);
         }
 
-        // Clear welcome hero if present on initial query
         if (chatBox.querySelector('.welcome-hero-container')) {
             chatBox.innerHTML = '';
         }
 
-        // 1. Display user query
         appendMessage(query, 'user');
         queryInput.value = '';
         appendTypingIndicator();
 
-        // 2. Setup AbortController for stream cancellation
         currentAbortController = new AbortController();
         setGenerating(true);
 
@@ -1259,22 +1258,103 @@ document.addEventListener('DOMContentLoaded', () => {
         let detectedRoute = null;
         let detectedSources = [];
 
-        try {
-            const response = await fetch('/api/query/stream', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    query,
-                    session_id: activeSessionId,
-                    model: selectedModel,
-                    effort: selectedEffort
-                }),
-                signal: currentAbortController.signal
-            });
+        // Check if query is an immediate raw SQL execution request
+        const isDirectSql = /^\s*(SELECT|WITH|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|PRAGMA|DESCRIBE)\b/i.test(query);
 
-            if (!response.ok) {
+        try {
+            // If user typed raw SQL directly into the prompt dock, execute against /api/db/query
+            if (isDirectSql) {
+                removeTypingIndicator();
+                const bubbleData = createStreamingAssistantBubble('db_query', false);
+                const assistantMsgBubble = bubbleData.container;
+                const textElement = bubbleData.textSpan;
+
+                if (window.DimensionSqlRunner) {
+                    const runnerCard = window.DimensionSqlRunner.createSqlRunnerCard(query);
+                    textElement.appendChild(runnerCard);
+                    // Automatically trigger execution
+                    const runBtn = runnerCard.querySelector('.sql-run-btn');
+                    if (runBtn) runBtn.click();
+                } else {
+                    textElement.textContent = `Executing SQL: ${query}`;
+                }
+                setGenerating(false);
+                return;
+            }
+
+            // Determine stream source: Studio v2 Runs or legacy endpoints
+            let activeConnId = window.DimensionStudioWorkbench 
+                ? window.DimensionStudioWorkbench.state.activeConnectionId 
+                : localStorage.getItem('dimension_active_connection_id');
+
+            let response = null;
+            let isV2StudioStream = false;
+
+            if (activeConnId) {
+                try {
+                    const runInit = await fetch('/api/v2/runs', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            session_id: activeSessionId || 'default',
+                            connection_id: activeConnId,
+                            mode: 'ask',
+                            effort: selectedEffort,
+                            message: query,
+                            model_name: selectedModel
+                        }),
+                        signal: currentAbortController.signal
+                    });
+                    if (runInit.ok) {
+                        const runJson = await runInit.json();
+                        const rId = runJson.run_id;
+                        response = await fetch(`/api/v2/runs/${rId}/events`, {
+                            signal: currentAbortController.signal
+                        });
+                        if (response.ok) {
+                            isV2StudioStream = true;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Studio v2 run fallback:', e);
+                }
+            }
+
+            if (!response || !response.ok) {
+                let streamUrl = '/api/agent/stream';
+                let streamPayload = {
+                    prompt: query,
+                    table_context: currentSchema && currentSchema.tables ? currentSchema.tables.map(t => t.name) : [],
+                    model: selectedModel,
+                    safety_mode: selectedSafetyMode
+                };
+
+                response = await fetch(streamUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(streamPayload),
+                    signal: currentAbortController.signal
+                }).catch(() => null);
+
+                // Fallback to /api/query/stream if /api/agent/stream returns 404/503
+                if (!response || !response.ok) {
+                    streamUrl = '/api/query/stream';
+                    streamPayload = {
+                        query,
+                        session_id: activeSessionId,
+                        model: selectedModel,
+                        effort: selectedEffort
+                    };
+                    response = await fetch(streamUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(streamPayload),
+                        signal: currentAbortController.signal
+                    });
+                }
+            }
+
+            if (!response || !response.ok) {
                 removeTypingIndicator();
                 setGenerating(false);
                 const errData = await response.json().catch(() => ({}));
@@ -1289,6 +1369,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const reader = response.body.getReader();
             const decoder = new TextDecoder('utf-8');
             let buffer = '';
+            let currentEventName = 'message';
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -1300,10 +1381,73 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 for (const line of lines) {
                     const trimmed = line.trim();
-                    if (!trimmed || !trimmed.startsWith('data: ')) continue;
+                    if (!trimmed) continue;
+
+                    if (trimmed.startsWith('event: ')) {
+                        currentEventName = trimmed.substring(7).trim();
+                        continue;
+                    }
+
+                    if (!trimmed.startsWith('data: ')) continue;
                     const jsonStr = trimmed.substring(6);
+
+                    if (jsonStr === '[DONE]') {
+                        removeTypingIndicator();
+                        setGenerating(false);
+                        if (assistantMsgBubble && textElement && window.DimensionSqlRunner && fullAnswer) {
+                            window.DimensionSqlRunner.renderMarkdownWithSql(fullAnswer, textElement);
+                        }
+                        continue;
+                    }
+
                     try {
                         const payload = JSON.parse(jsonStr);
+
+                        // If Studio v2 Typed SSE Stream
+                        if (isV2StudioStream) {
+                            if (!assistantMsgBubble) {
+                                removeTypingIndicator();
+                                const bubbleData = createStreamingAssistantBubble('schema_engine', false);
+                                assistantMsgBubble = bubbleData.container;
+                                textElement = bubbleData.textSpan;
+                                badgeElement = bubbleData.badgeEl;
+                            }
+
+                            if (currentEventName === 'tool.called') {
+                                const toolPill = document.createElement('div');
+                                toolPill.className = 'agent-step-pill';
+                                toolPill.textContent = `⚡ [${payload.tool}] Running...`;
+                                assistantMsgBubble.insertBefore(toolPill, textElement);
+                            } else if (currentEventName === 'token') {
+                                fullAnswer += (payload.delta || '');
+                                textElement.textContent = fullAnswer;
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                            } else if (currentEventName === 'sql.suggested') {
+                                if (window.DimensionSqlRunner && payload.sql) {
+                                    const card = window.DimensionSqlRunner.createSqlRunnerCard(payload.sql, payload.query_token);
+                                    assistantMsgBubble.appendChild(card);
+                                }
+                            } else if (currentEventName === 'evidence.added') {
+                                detectedSources.push({
+                                    source: payload.title || 'Studio Evidence',
+                                    snippet: payload.body || ''
+                                });
+                            } else if (currentEventName === 'run.completed') {
+                                removeTypingIndicator();
+                                setGenerating(false);
+                                if (window.DimensionSqlRunner && fullAnswer) {
+                                    window.DimensionSqlRunner.renderMarkdownWithSql(fullAnswer, textElement);
+                                }
+                                if (detectedSources.length > 0) {
+                                    attachSourcesToBubble(assistantMsgBubble, detectedSources, 'schema_engine');
+                                }
+                            } else if (currentEventName === 'run.failed') {
+                                removeTypingIndicator();
+                                setGenerating(false);
+                                textElement.textContent += `\n\n[Run Failed: ${payload.message}]`;
+                            }
+                            continue;
+                        }
 
                         if (payload.route && !detectedRoute) {
                             detectedRoute = payload.route;
@@ -1330,7 +1474,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 badgeElement.innerHTML = getRouteBadgeHtml(detectedRoute, false);
                             }
                             fullAnswer += payload.token;
-                            textElement.textContent = fullAnswer;
+                            textElement.textContent = fullAnswer.replace(/<!--\s*suggestions:[\s\S]*?-->/gi, '').trimEnd();
                             chatBox.scrollTop = chatBox.scrollHeight;
                         }
 
@@ -1345,6 +1489,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const bubbleData = createStreamingAssistantBubble(detectedRoute || payload.route);
                                 assistantMsgBubble = bubbleData.container;
                                 textElement = bubbleData.textSpan;
+                            }
+
+                            // Finalize: Render Markdown with interactive SQL Runner cards
+                            if (window.DimensionSqlRunner && fullAnswer) {
+                                window.DimensionSqlRunner.renderMarkdownWithSql(fullAnswer, textElement);
+                            } else {
                                 textElement.textContent = fullAnswer || 'No response generated.';
                             }
 
@@ -1369,12 +1519,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
+
+            // Stream reader finished
+            if (assistantMsgBubble && textElement && window.DimensionSqlRunner && fullAnswer) {
+                window.DimensionSqlRunner.renderMarkdownWithSql(fullAnswer, textElement);
+            }
         } catch (error) {
             removeTypingIndicator();
             if (error.name === 'AbortError') {
-                // Generation stopped by user via button or Escape key
                 if (fullAnswer.trim()) {
-                    // Save partial response to session storage
                     fetch('/api/chat/stop', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1391,7 +1544,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } finally {
             setGenerating(false);
-            // Refresh sessions list to update active title and message counts
             fetchSessions();
         }
     });
@@ -1401,6 +1553,6 @@ document.addEventListener('DOMContentLoaded', () => {
         chatBox.innerHTML = renderWelcomeHero();
     }
     fetchModels();
-    fetchDocuments();
+    fetchSchema();
     fetchSessions();
 });

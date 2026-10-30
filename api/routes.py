@@ -266,38 +266,10 @@ async def clear_all_documents():
 
 @router.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in SUPPORTED_EXTENSIONS:
-        supported_str = ", ".join(sorted(SUPPORTED_EXTENSIONS))
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file format '{ext}'. Supported formats: {supported_str}"
-        )
-    
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
-    
-    try:
-        # Save uploaded file
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-            
-        # Process document and split into chunks
-        chunks = process_document(file_path)
-        
-        # Purge any previous embeddings for this file to avoid duplicate vectors
-        delete_document_from_store(file.filename)
-        
-        # Add chunks to vector store
-        add_documents_to_store(chunks)
-        
-        return {
-            "message": f"Successfully processed {file.filename} and added {len(chunks)} chunks to the database.",
-            "filename": file.filename,
-            "chunks": len(chunks),
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    raise HTTPException(
+        status_code=400,
+        detail="Document uploads (.pdf, .docx, .txt, .md) have been disabled. Dimension has been repurposed into the Autonomous Data & Schema Studio. Please connect a database or ingest tabular/database files (.csv, .tsv, .parquet, .sqlite, .db) via /api/db/connect."
+    )
 
 @router.post("/documents/{filename}/summarize")
 async def summarize_document_endpoint(filename: str):

@@ -12,3 +12,12 @@ langchain-community
 docx2txt
 duckduckgo-search
 ddgs
+duckdb
+sqlalchemy
+pandas
+sqlglot
+keyring
+psycopg[binary]
+faker
+pymysql
+cryptography

@@ -3,7 +3,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
-    LANGCHAIN_TRACING_V2: str = "true"
+    LANGCHAIN_TRACING_V2: str = "false"
     LANGCHAIN_ENDPOINT: str = "https://api.smith.langchain.com"
     LANGCHAIN_API_KEY: Optional[str] = None
     LANGCHAIN_PROJECT: str = "agentic-qa"
